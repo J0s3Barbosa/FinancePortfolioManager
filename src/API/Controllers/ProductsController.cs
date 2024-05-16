@@ -1,67 +1,101 @@
 ﻿using Domain.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using Services;
 
 namespace API.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [ApiVersion("1.0")]
+    [Route("api/v{version:apiVersion}/[controller]")]
     public class ProductsController : ControllerBase
     {
         private readonly IProductService _productService;
+        private readonly ILogger<ProductsController> _logger;
 
-        public ProductsController(IProductService productService)
+        public ProductsController(IProductService productService, ILogger<ProductsController> logger)
         {
-            _productService = productService;
+            _productService = productService ?? throw new ArgumentNullException(nameof(productService));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
         [HttpGet]
-        public IActionResult GetAllProducts()
+        public async Task<IActionResult> GetAllProducts()
         {
-            var products = _productService.GetAllProducts();
+            var products = await _productService.GetAllProductsAsync();
             return Ok(products);
         }
 
         [HttpGet("{id}")]
-        public IActionResult GetProductById(int id)
+        public async Task<IActionResult> GetProductById(int id)
         {
-            var product = _productService.GetProductById(id);
+            var product = await _productService.GetProductByIdAsync(id);
             if (product == null)
                 return NotFound();
+
             return Ok(product);
         }
 
         [HttpPost]
-        public IActionResult CreateProduct([FromBody] InvestmentProduct product)
+        public async Task<IActionResult> CreateProduct([FromBody] Product product)
         {
-            _productService.CreateProduct(product);
-            return CreatedAtAction(nameof(GetProductById), new { id = product.Id }, product);
+            try
+            {
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
+
+                await _productService.CreateProductAsync(product);
+                return CreatedAtAction(nameof(GetProductById), new { id = product.Id }, product);
+
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "An error occurred while creating a new Resource.");
+                return StatusCode(500, "Internal server error");
+            }
         }
 
         [HttpPut("{id}")]
-        public IActionResult UpdateProduct(int id, [FromBody] InvestmentProduct product)
+        public async Task<IActionResult> UpdateProduct(int id, [FromBody] Product product)
         {
-            if (id != product.Id)
-                return BadRequest();
+            try
+            {
+                if (id != product.Id)
+                    return BadRequest();
 
-            var existingProduct = _productService.GetProductById(id);
-            if (existingProduct == null)
-                return NotFound();
+                var existingProduct = await _productService.GetProductByIdAsync(id);
+                if (existingProduct == null)
+                    return NotFound();
 
-            _productService.UpdateProduct(product);
-            return NoContent();
+                await _productService.UpdateProductAsync(product);
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"An error occurred while updating Resource with ID {id}.");
+                return StatusCode(500, "Internal server error");
+
+            }
         }
 
         [HttpDelete("{id}")]
-        public IActionResult DeleteProduct(int id)
+        public async Task<IActionResult> DeleteProduct(int id)
         {
-            var existingProduct = _productService.GetProductById(id);
-            if (existingProduct == null)
-                return NotFound();
+            try
+            {
+                var existingProduct = await _productService.GetProductByIdAsync(id);
+                if (existingProduct == null)
+                    return NotFound();
 
-            _productService.DeleteProduct(id);
-            return NoContent();
+                await _productService.DeleteProductAsync(id);
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"An error occurred while deleting resource with ID {id}.");
+                return StatusCode(500, "Internal server error");
+            }
         }
     }
 }
