@@ -6,11 +6,13 @@ using System.Threading.Tasks;
 
 namespace Domain.Models
 {
-    public class InvestmentProduct
+    public class Product
     {
         public int Id { get; set; }
         public string Name { get; set; }
-        public DateTime ExpirationDate { get; set; }
+        public string Description { get; set; }
         public decimal Price { get; set; }
+        public DateTime ExpiryDate { get; set; }
     }
+
 }

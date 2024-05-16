@@ -7,7 +7,8 @@ using Services;
 namespace API.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [ApiVersion("1.0")]
+    [Route("api/v{version:apiVersion}/[controller]")]
     public class InvestmentsController : ControllerBase
     {
         private readonly IInvestmentService _investmentService;
@@ -18,34 +19,50 @@ namespace API.Controllers
         }
 
         [HttpPost("buy")]
-        public IActionResult BuyProduct([FromBody] BuySellRequest request)
+        public async Task<IActionResult> BuyProduct([FromBody] BuySellRequest request)
         {
-            _investmentService.BuyProduct(request.ProductId, request.Quantity);
-            return Ok();
+            try
+            {
+                if (request.Quantity <= 0)
+                {
+                    return BadRequest(new { Success = false, Message = "A quantidade deve ser maior que zero." });
+                }
+
+                await _investmentService.BuyProductAsync(request.ProductId, request.Quantity);
+                return Ok(new { Success = true, Message = "Compra realizada com sucesso." });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { Success = false, Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Success = false, Message = "Ocorreu um erro durante a compra.", Error = ex.Message });
+            }
         }
 
         [HttpPost("sell")]
-        public IActionResult SellProduct([FromBody] BuySellRequest request)
+        public async Task<IActionResult> SellProduct([FromBody] BuySellRequest request)
         {
-            _investmentService.SellProduct(request.ProductId, request.Quantity);
-            return Ok();
-        }
+            try
+            {
+                if (request.Quantity <= 0)
+                {
+                    return BadRequest(new { Success = false, Message = "A quantidade deve ser maior que zero." });
+                }
 
-        [HttpGet("{productId}/statement")]
-        public IActionResult GetProductStatement(int productId)
-        {
-            var statement = _investmentService.GetProductStatement(productId);
-            if (statement == null)
-                return NotFound();
-            return Ok(statement);
+                await _investmentService.SellProductAsync(request.ProductId, request.Quantity);
+                return Ok(new { Success = true, Message = "Venda realizada com sucesso." });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { Success = false, Message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { Success = false, Message = "Ocorreu um erro durante a venda.", Error = ex.Message });
+            }
         }
-    }
-
-    // Models/BuySellRequest.cs
-    public class BuySellRequest
-    {
-        public int ProductId { get; set; }
-        public int Quantity { get; set; }
     }
 
 }

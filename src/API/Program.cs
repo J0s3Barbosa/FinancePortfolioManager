@@ -1,6 +1,10 @@
-
+using DataAccess;
+using DataAccess.Interfaces;
 using DataAccess.Repositories;
 using Domain.Models;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 using Services;
 
 namespace API;
@@ -14,10 +18,10 @@ public class Program
         // Add services to the container.
 
         builder.Services.AddControllers();
-        builder.Services.AddScoped<IProductRepository, ProductRepository>();
-        builder.Services.AddScoped<IInvestmentRepository, InvestmentRepository>();
-        builder.Services.AddScoped<IProductService, ProductService>();
-        builder.Services.AddScoped<IInvestmentService, InvestmentService>();
+        builder.Services.AddTransient<IProductRepository, ProductRepository>();
+        builder.Services.AddTransient<IInvestmentRepository, InvestmentRepository>();
+        builder.Services.AddTransient<IProductService, ProductService>();
+        builder.Services.AddTransient<IInvestmentService, InvestmentService>();
         builder.Services.AddScoped<IEmailNotificationService, EmailNotificationService>();
         builder.Services.AddScoped<IEmailSender, EmailSender>();
         // Add email settings from configuration
@@ -26,6 +30,18 @@ public class Program
         // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
+        builder.Services.AddApiVersioning();
+        builder.Services.AddMemoryCache();
+        builder.Services.AddResponseCaching();
+
+        builder.Services.AddDbContextPool<MainContext>(
+    options =>
+    {
+        options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+        //options.UseLazyLoadingProxies();
+        // Enable sensitive data logging for debugging
+        options.EnableSensitiveDataLogging(true);
+    });
 
         var app = builder.Build();
 

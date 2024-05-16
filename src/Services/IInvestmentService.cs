@@ -1,17 +1,16 @@
 ﻿using Domain.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace DataAccess.Repositories
 {
     public interface IInvestmentService
     {
-        void BuyProduct(int productId, int quantity);
-        void SellProduct(int productId, int quantity);
-        InvestmentProductStatement GetProductStatement(int productId);
+        Task BuyProductAsync(int productId, int quantity);
+        Task SellProductAsync(int productId, int quantity);
+        Task<IEnumerable<Investment>> GetAllInvestmentsAsync();
+        Task<Investment> GetInvestmentByIdAsync(int id);
+        Task CreateInvestmentAsync(Investment investment);
+        Task UpdateInvestmentAsync(Investment investment);
+        Task DeleteInvestmentAsync(int id);
     }
 
 }

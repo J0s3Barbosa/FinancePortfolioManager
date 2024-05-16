@@ -9,10 +9,10 @@ namespace Services
 {
     public interface IProductService
     {
-        List<InvestmentProduct> GetAllProducts();
-        InvestmentProduct GetProductById(int id);
-        void CreateProduct(InvestmentProduct product);
-        void UpdateProduct(InvestmentProduct product);
-        void DeleteProduct(int id);
+        Task<IEnumerable<Product>> GetAllProductsAsync();
+        Task<Product> GetProductByIdAsync(int id);
+        Task CreateProductAsync(Product product);
+        Task UpdateProductAsync(Product product);
+        Task DeleteProductAsync(int id);
     }
 }
