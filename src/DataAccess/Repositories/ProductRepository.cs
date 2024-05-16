@@ -1,34 +1,49 @@
-﻿using Domain.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using DataAccess.Interfaces;
+using Domain.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace DataAccess.Repositories
 {
     public class ProductRepository : IProductRepository
     {
-        private readonly List<InvestmentProduct> _products = new();
+        private readonly MainContext _context;
 
-        public List<InvestmentProduct> GetAll() => _products;
-
-        public InvestmentProduct GetById(int id) => _products.FirstOrDefault(p => p.Id == id);
-
-        public void Add(InvestmentProduct product) => _products.Add(product);
-
-        public void Update(InvestmentProduct product)
+        public ProductRepository(MainContext context)
         {
-            var existingProduct = GetById(product.Id);
-            if (existingProduct != null)
-            {
-                existingProduct.Name = product.Name;
-                existingProduct.ExpirationDate = product.ExpirationDate;
-                existingProduct.Price = product.Price;
-            }
+            _context = context;
         }
 
-        public void Delete(int id) => _products.RemoveAll(p => p.Id == id);
+        public async Task<IEnumerable<Product>> GetAllAsync()
+        {
+            return await _context.Products.ToListAsync();
+        }
+
+        public async Task<Product> GetByIdAsync(int id)
+        {
+            return await _context.Products.FindAsync(id);
+        }
+
+        public async Task AddAsync(Product product)
+        {
+            _context.Products.Add(product);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task UpdateAsync(Product product)
+        {
+            _context.Products.Update(product);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task DeleteAsync(int id)
+        {
+            var product = await _context.Products.FindAsync(id);
+            if (product != null)
+            {
+                _context.Products.Remove(product);
+                await _context.SaveChangesAsync();
+            }
+        }
     }
 
 }

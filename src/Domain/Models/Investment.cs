@@ -6,14 +6,16 @@ using System.Threading.Tasks;
 
 namespace Domain.Models
 {
-    public class InvestmentTransaction
+    public class Investment
     {
         public int Id { get; set; }
         public int ProductId { get; set; }
-        public string Type { get; set; } // "Compra" ou "Venda"
-        public int Quantity { get; set; }
+        public int ClientId { get; set; }
         public decimal Amount { get; set; }
-        public DateTime Date { get; set; }
+        public DateTime PurchaseDate { get; set; }
+
+        public Product Product { get; set; }
     }
+
 
 }

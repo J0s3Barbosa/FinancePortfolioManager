@@ -1,67 +1,103 @@
-﻿using Domain.Models;
-using Services;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using DataAccess.Interfaces;
+using Domain.Models;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace DataAccess.Repositories
 {
     public class InvestmentService : IInvestmentService
     {
-        private readonly IProductService _productService;
         private readonly IInvestmentRepository _investmentRepository;
+        private readonly IMemoryCache _cache;
+        private static readonly string InvestmentCacheKey = "investments_cache_key";
+        private readonly IProductRepository _productRepository;
 
-        public InvestmentService(IProductService productService, IInvestmentRepository investmentRepository)
+        public InvestmentService(IInvestmentRepository investmentRepository, IProductRepository productRepository, IMemoryCache cache)
         {
-            _productService = productService;
             _investmentRepository = investmentRepository;
+            _productRepository = productRepository;
+            _cache = cache;
         }
 
-        public void BuyProduct(int productId, int quantity)
+        public async Task BuyProductAsync(int productId, int quantity)
         {
-            var product = _productService.GetProductById(productId);
-            if (product != null)
+            var product = await _productRepository.GetByIdAsync(productId);
+            if (product == null || quantity <= 0)
             {
-                var transaction = new InvestmentTransaction
-                {
-                    ProductId = productId,
-                    Type = "Compra",
-                    Quantity = quantity,
-                    Amount = product.Price * quantity,
-                    Date = DateTime.UtcNow
-                };
-                _investmentRepository.AddTransaction(transaction);
+                throw new ArgumentException("Produto não encontrado ou quantidade inválida.");
             }
+
+            // Perform the logic for buying the product asynchronously
+            await _investmentRepository.BuyAsync(product, quantity);
+
+            _cache.Remove(InvestmentCacheKey);
         }
 
-        public void SellProduct(int productId, int quantity)
+        public async Task SellProductAsync(int productId, int quantity)
         {
-            var product = _productService.GetProductById(productId);
-            if (product != null)
+            var product = await _productRepository.GetByIdAsync(productId);
+            if (product == null || quantity <= 0)
             {
-                var transaction = new InvestmentTransaction
-                {
-                    ProductId = productId,
-                    Type = "Venda",
-                    Quantity = quantity,
-                    Amount = product.Price * quantity,
-                    Date = DateTime.UtcNow
-                };
-                _investmentRepository.AddTransaction(transaction);
+                throw new ArgumentException("Produto não encontrado ou quantidade inválida.");
             }
+
+            // Perform the logic for selling the product asynchronously
+            await _investmentRepository.SellAsync(product, quantity);
+
+            _cache.Remove(InvestmentCacheKey);
         }
 
-        public InvestmentProductStatement GetProductStatement(int productId)
+        public async Task<IEnumerable<Investment>> GetAllInvestmentsAsync()
         {
-            var product = _productService.GetProductById(productId);
-            var transactions = _investmentRepository.GetTransactionsByProductId(productId);
-            return new InvestmentProductStatement
+            if (!_cache.TryGetValue(InvestmentCacheKey, out IEnumerable<Investment> investments))
             {
-                Product = product,
-                Transactions = transactions
-            };
+                investments = await _investmentRepository.GetAllAsync();
+
+                var cacheEntryOptions = new MemoryCacheEntryOptions()
+                    .SetSlidingExpiration(TimeSpan.FromMinutes(10))
+                    .SetAbsoluteExpiration(TimeSpan.FromHours(1));
+
+                _cache.Set(InvestmentCacheKey, investments, cacheEntryOptions);
+            }
+
+            return investments;
+        }
+
+        public async Task<Investment> GetInvestmentByIdAsync(int id)
+        {
+            var investment = await _investmentRepository.GetByIdAsync(id);
+            if (investment == null)
+            {
+                throw new ArgumentException("Investimento não encontrado.");
+            }
+            return investment;
+        }
+
+        public async Task CreateInvestmentAsync(Investment investment)
+        {
+            if (investment == null)
+            {
+                throw new ArgumentNullException(nameof(investment), "Investimento não pode ser nulo.");
+            }
+
+            await _investmentRepository.AddAsync(investment);
+            _cache.Remove(InvestmentCacheKey);
+        }
+
+        public async Task UpdateInvestmentAsync(Investment investment)
+        {
+            if (investment == null)
+            {
+                throw new ArgumentNullException(nameof(investment), "Investimento não pode ser nulo.");
+            }
+
+            await _investmentRepository.UpdateAsync(investment);
+            _cache.Remove(InvestmentCacheKey);
+        }
+
+        public async Task DeleteInvestmentAsync(int id)
+        {
+            await _investmentRepository.DeleteAsync(id);
+            _cache.Remove(InvestmentCacheKey);
         }
     }
 
