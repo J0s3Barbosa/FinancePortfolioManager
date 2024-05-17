@@ -59,6 +59,10 @@ namespace Services
             {
                 throw new ArgumentNullException(nameof(product));
             }
+            //if (product.ExpiryDate == null)
+            //{
+            //    product.ExpiryDate = DateTime.UtcNow.AddDays(7);
+            //}
 
             await _productRepository.UpdateAsync(product);
         }
