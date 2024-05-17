@@ -1,6 +1,7 @@
 ﻿using DataAccess.Interfaces;
 using Domain.Models;
 using Microsoft.Extensions.Caching.Memory;
+using Services.Interfaces;
 
 namespace DataAccess.Repositories
 {

@@ -1,6 +1,6 @@
 ﻿using Domain.Models;
 
-namespace DataAccess.Repositories
+namespace Services.Interfaces
 {
     public interface IInvestmentService
     {
