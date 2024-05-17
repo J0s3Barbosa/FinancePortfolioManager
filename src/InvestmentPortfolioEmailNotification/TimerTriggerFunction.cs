@@ -1,9 +1,9 @@
 using System;
 using System.Threading.Tasks;
-using DataAccess.Repositories;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Host;
 using Microsoft.Extensions.Logging;
+using Services.Interfaces;
 
 namespace InvestmentPortfolioEmailNotification
 {

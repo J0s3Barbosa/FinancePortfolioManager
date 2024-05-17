@@ -1,8 +1,8 @@
-﻿using DataAccess.Repositories;
-using Domain.Models;
+﻿using Domain.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Services;
+using Services.Interfaces;
 
 namespace API.Controllers
 {
