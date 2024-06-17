@@ -23,26 +23,30 @@ namespace DataAccess.Repositories
             return await _context.Products.FindAsync(id);
         }
 
-        public async Task AddAsync(Product product)
+        public async Task<Product> AddAsync(Product product)
         {
-            _context.Products.Add(product);
+            var result = await _context.Products.AddAsync(product);
             await _context.SaveChangesAsync();
+            return result.Entity;
         }
 
-        public async Task UpdateAsync(Product product)
+        public async Task<Product> UpdateAsync(Product product)
         {
-            _context.Products.Update(product);
+            var result = _context.Products.Update(product);
             await _context.SaveChangesAsync();
+            return result.Entity;
         }
 
-        public async Task DeleteAsync(int id)
+        public async Task<bool> DeleteAsync(int id)
         {
             var product = await _context.Products.FindAsync(id);
             if (product != null)
             {
                 _context.Products.Remove(product);
                 await _context.SaveChangesAsync();
+                return true;
             }
+            return false;
         }
     }
 

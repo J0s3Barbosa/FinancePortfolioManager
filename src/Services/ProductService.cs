@@ -1,5 +1,6 @@
 ﻿using DataAccess.Interfaces;
 using Domain.Models;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Services.Interfaces;
 
@@ -9,7 +10,9 @@ namespace Services
     {
         private readonly IProductRepository _productRepository;
         private readonly IMemoryCache _cache;
-        private static readonly string ProductCacheKey = "products_cache_key";
+        private static readonly string cacheKey = "products_cache_key";
+        private static readonly SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
+        private readonly object _cacheLock = new object();
 
         public ProductService(IProductRepository productRepository, IMemoryCache cache)
         {
@@ -19,15 +22,31 @@ namespace Services
 
         public async Task<IEnumerable<Product>> GetAllProductsAsync()
         {
-            if (!_cache.TryGetValue(ProductCacheKey, out IEnumerable<Product> products))
+            bool isAvaiable = _cache.TryGetValue(cacheKey, out IEnumerable<Product> products);
+            if (isAvaiable) return products;
+            else
             {
-                products = await _productRepository.GetAllAsync();
+                try
+                {
+                    await semaphore.WaitAsync();
+                    if (isAvaiable) return products;
+                    else
+                    {
+                        products = await _productRepository.GetAllAsync();
 
-                var cacheEntryOptions = new MemoryCacheEntryOptions()
-                    .SetSlidingExpiration(TimeSpan.FromMinutes(10))
-                    .SetAbsoluteExpiration(TimeSpan.FromHours(1));
+                        var cacheEntryOptions = new MemoryCacheEntryOptions()
+                                .SetSlidingExpiration(TimeSpan.FromSeconds(60))
+                                .SetAbsoluteExpiration(TimeSpan.FromSeconds(3600))
+                                .SetPriority(CacheItemPriority.Normal)
+                                .SetSize(1024);
 
-                _cache.Set(ProductCacheKey, products, cacheEntryOptions);
+                        _cache.Set(cacheKey, products, cacheEntryOptions);
+                    }
+                }
+                finally
+                {
+                    semaphore.Release();
+                }
             }
 
             return products;
@@ -35,42 +54,82 @@ namespace Services
 
         public async Task<Product> GetProductByIdAsync(int id)
         {
+            try
+            {
+                if (id <= 0)
+                {
+                    throw new ArgumentException("Invalid product id.", nameof(id));
+                }
+
+                return await _productRepository.GetByIdAsync(id);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+
+        public async Task<Product> CreateProductAsync(Product product)
+        {
+            try
+            {
+                ArgumentNullException.ThrowIfNull(product);
+
+                Product result = await _productRepository.AddAsync(product);
+                ClearCache();
+                return result;
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+
+        public async Task<Product> UpdateProductAsync(Product product)
+        {
+            try
+            {
+                ArgumentNullException.ThrowIfNull(product);
+
+                Product result = await _productRepository.UpdateAsync(product);
+                ClearCache();
+                return result;
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }
+
+        public async Task<bool> DeleteProductAsync(int id)
+        {
             if (id <= 0)
             {
                 throw new ArgumentException("Invalid product id.", nameof(id));
             }
+            try
+            {
+                var entity = await _productRepository.GetByIdAsync(id);
+                if (entity == null)
+                    return false;
 
-            return await _productRepository.GetByIdAsync(id);
+                await _productRepository.DeleteAsync(id);
+                ClearCache(); // Clear cache after deleting data
+                return true;
+            }
+            catch (Exception)
+            {
+                throw;
+            }
         }
 
-        public async Task CreateProductAsync(Product product)
+        private void ClearCache()
         {
-            if (product == null)
+            lock (_cacheLock)
             {
-                throw new ArgumentNullException(nameof(product));
+                _cache.Remove(cacheKey);
             }
-
-            await _productRepository.AddAsync(product);
-        }
-
-        public async Task UpdateProductAsync(Product product)
-        {
-            if (product == null)
-            {
-                throw new ArgumentNullException(nameof(product));
-            }
-
-            await _productRepository.UpdateAsync(product);
-        }
-
-        public async Task DeleteProductAsync(int id)
-        {
-            if (id <= 0)
-            {
-                throw new ArgumentException("Invalid product id.", nameof(id));
-            }
-
-            await _productRepository.DeleteAsync(id);
         }
 
     }

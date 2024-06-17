@@ -6,9 +6,8 @@ namespace DataAccess.Interfaces
     {
         Task<IEnumerable<Product>> GetAllAsync();
         Task<Product> GetByIdAsync(int id);
-        Task AddAsync(Product product);
-        Task UpdateAsync(Product product);
-        Task DeleteAsync(int id);
-
+        Task<Product> AddAsync(Product product);
+        Task<bool> DeleteAsync(int id);
+        Task<Product> UpdateAsync(Product product);
     }
 }
